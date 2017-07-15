@@ -1,13 +1,16 @@
 [bastion]
-host = "127.0.0.1:22"
+host = "127.0.0.1"
+port = "22"
 user = "user"
 cert_path = "/home/user/.ssh/cert.pem"
 
 [bastion.cascades.server1]
 host = "10.1.0.1"
+port = "22"
 user = "user"
 cert_path = "/home/user/.ssh/cert2.pem"
 
 [bastion.cascades.server1.tunnels.server2]
-local_addr = ":8080"
-remote_addr = "127.0.0.1:80"
+local_port = "8080"
+remote_host = "127.0.0.1"
+remote_port = "80"

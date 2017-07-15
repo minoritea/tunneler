@@ -1,63 +1,37 @@
 package main
 
 import (
-	"fmt"
 	"github.com/naoina/toml"
 	"io/ioutil"
-	"sync"
+	"net"
 )
 
 type BastionConfig struct {
 	Host     string
+	Port     string
 	User     string
 	CertPath string
 	Tunnels  map[string]Tunnel
-	Cascades BastionConfigs
+	Cascades map[string]BastionConfig
 }
 
-type BastionConfigs map[string]BastionConfig
-
-type Config struct {
-	BastionConfigs
-	errch chan error `toml:"-"`
+type Tunnel struct {
+	LocalHost  string
+	LocalPort  string
+	RemoteHost string
+	RemotePort string
+	callback   func(net.Addr) `toml:"-"`
 }
 
-func handleError(errch chan error) {
-	for err := range errch {
-		fmt.Printf("%+v\n", err)
-	}
-}
-
-func LoadConfig(confpath string) (Config, error) {
-	config := Config{make(BastionConfigs), make(chan error)}
+func LoadConfig(confpath string) (map[string]BastionConfig, error) {
+	config := make(map[string]BastionConfig)
 	data, err := ioutil.ReadFile(confpath)
 	if err != nil {
 		return config, err
 	}
-	err = toml.Unmarshal(data, &config.BastionConfigs)
+	err = toml.Unmarshal(data, &config)
 	if err != nil {
 		return config, err
 	}
 	return config, nil
-}
-
-func (bc BastionConfig) start(wg *sync.WaitGroup, errch chan error) {
-	defer wg.Done()
-	b, err := NewBastion(bc, errch)
-	if err != nil {
-		errch <- err
-		return
-	}
-	defer b.Close()
-	b.Run(bc)
-}
-
-func (config Config) Execute() {
-	go handleError(config.errch)
-	wg := new(sync.WaitGroup)
-	for _, bc := range config.BastionConfigs {
-		wg.Add(1)
-		go bc.start(wg, config.errch)
-	}
-	wg.Wait()
 }
