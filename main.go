@@ -16,6 +16,5 @@ func main() {
 		log.Println("Failed to load a config file:", confpath, err)
 		return
 	}
-
-	config.Execute()
+	execute(config)
 }

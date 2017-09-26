@@ -10,6 +10,7 @@ import (
 )
 
 type Bastion struct {
+	BastionConfig
 	*ssh.Client
 	wg    *sync.WaitGroup
 	errch chan error
@@ -17,7 +18,9 @@ type Bastion struct {
 
 func (b *Bastion) Forward(t Tunnel) {
 	defer b.wg.Done()
-	server, err := net.Listen("tcp", t.LocalAddr)
+	laddr := net.JoinHostPort(t.LocalHost, t.LocalPort)
+	raddr := net.JoinHostPort(t.RemoteHost, t.RemotePort)
+	server, err := net.Listen("tcp", laddr)
 	if err != nil {
 		b.errch <- err
 		return
@@ -35,7 +38,7 @@ func (b *Bastion) Forward(t Tunnel) {
 		}
 		defer lc.Close()
 
-		rc, err := b.Dial("tcp", t.RemoteAddr)
+		rc, err := b.Dial("tcp", raddr)
 		if err != nil {
 			b.errch <- err
 			continue
@@ -46,20 +49,25 @@ func (b *Bastion) Forward(t Tunnel) {
 	}
 }
 
-func (b *Bastion) Run(bc BastionConfig) {
+func (b *Bastion) Up() {
 	go handleError(b.errch)
-	for _, t := range bc.Tunnels {
+	for _, t := range b.Tunnels {
 		b.wg.Add(1)
 		go b.Forward(t)
 	}
-	for _, c := range bc.Cascades {
+	for _, c := range b.Cascades {
 		ch := make(chan net.Addr)
-		t := Tunnel{"0.0.0.0:0", c.Host, func(addr net.Addr) { ch <- addr }}
+		t := Tunnel{"0.0.0.0", "0", c.Host, c.Port, func(addr net.Addr) { ch <- addr }}
 		b.wg.Add(1)
 		go b.Forward(t)
-		c.Host = (<-ch).String()
+		var err error
+		c.Host, c.Port, err = net.SplitHostPort((<-ch).String())
+		if err != nil {
+			b.errch <- err
+			continue
+		}
 		b.wg.Add(1)
-		go c.start(b.wg, b.errch)
+		go start(c, b.wg, b.errch)
 	}
 	b.wg.Wait()
 }
@@ -78,7 +86,7 @@ func NewBastion(config BastionConfig, errch chan error) (*Bastion, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Bastion{c, new(sync.WaitGroup), errch}, nil
+	return &Bastion{config, c, new(sync.WaitGroup), errch}, nil
 }
 
 func newSignerFromPath(path string) (ssh.Signer, error) {
