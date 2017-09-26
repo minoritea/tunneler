@@ -4,7 +4,7 @@ user = "user"
 cert_path = "/home/user/.ssh/cert.pem"
 
 [bastion.cascades.server1]
-host = "10.1.0.1"
+host = "10.1.0.1:22"
 user = "user"
 cert_path = "/home/user/.ssh/cert2.pem"
 
