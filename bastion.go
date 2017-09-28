@@ -82,7 +82,8 @@ func NewBastion(config BastionConfig, errch chan error) (*Bastion, error) {
 		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
-	c, err := ssh.Dial("tcp", config.Host, cc)
+	addr := net.JoinHostPort(config.Host, config.Port)
+	c, err := ssh.Dial("tcp", addr, cc)
 	if err != nil {
 		return nil, err
 	}
