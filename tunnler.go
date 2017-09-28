@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"sync"
+	"time"
 )
 
 func handleError(errch chan error) {
@@ -20,6 +21,7 @@ func execute(config map[string]BastionConfig) {
 		go start(bc, wg, errch)
 	}
 	wg.Wait()
+	time.Sleep(100 * time.Millisecond)
 }
 
 func start(bc BastionConfig, wg *sync.WaitGroup, errch chan error) {
