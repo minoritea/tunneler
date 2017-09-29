@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"strings"
 	"sync"
 )
 
@@ -16,10 +17,34 @@ type Bastion struct {
 	errch chan error
 }
 
+func resolveOnHost(c *ssh.Client, host string) (string, error) {
+	session, err := c.NewSession()
+	if err != nil {
+		return "", err
+	}
+	defer session.Close()
+	output, err := session.Output("getent hosts " + host)
+	if err != nil {
+		return "", err
+	}
+	splited := strings.Split(string(output), " ")
+	if len(splited) < 2 {
+		return "", errors.Errorf("`getent` puts invalid output: %s.", output)
+	}
+	return splited[0], nil
+}
+
 func (b *Bastion) Forward(t Tunnel) {
 	defer b.wg.Done()
 	laddr := net.JoinHostPort(t.LocalHost, t.LocalPort)
 	raddr := net.JoinHostPort(t.RemoteHost, t.RemotePort)
+	if t.ResolveOnHost {
+		if resolved, err := resolveOnHost(b.Client, t.RemoteHost); err != nil {
+			b.errch <- err
+		} else {
+			raddr = net.JoinHostPort(resolved, t.RemotePort)
+		}
+	}
 	server, err := net.Listen("tcp", laddr)
 	if err != nil {
 		b.errch <- err
@@ -57,7 +82,7 @@ func (b *Bastion) Up() {
 	}
 	for _, c := range b.Cascades {
 		ch := make(chan net.Addr)
-		t := Tunnel{"0.0.0.0", "0", c.Host, c.Port, func(addr net.Addr) { ch <- addr }}
+		t := Tunnel{"0.0.0.0", "0", c.Host, c.Port, c.ResolveOnHost, func(addr net.Addr) { ch <- addr }}
 		b.wg.Add(1)
 		go b.Forward(t)
 		var err error

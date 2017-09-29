@@ -7,20 +7,22 @@ import (
 )
 
 type BastionConfig struct {
-	Host     string
-	Port     string
-	User     string
-	CertPath string
-	Tunnels  map[string]Tunnel
-	Cascades map[string]BastionConfig
+	Host          string
+	Port          string
+	User          string
+	CertPath      string
+	Tunnels       map[string]Tunnel
+	Cascades      map[string]BastionConfig
+	ResolveOnHost bool
 }
 
 type Tunnel struct {
-	LocalHost  string
-	LocalPort  string
-	RemoteHost string
-	RemotePort string
-	callback   func(net.Addr) `toml:"-"`
+	LocalHost     string
+	LocalPort     string
+	RemoteHost    string
+	RemotePort    string
+	ResolveOnHost bool
+	callback      func(net.Addr) `toml:"-"`
 }
 
 func LoadConfig(confpath string) (map[string]BastionConfig, error) {
