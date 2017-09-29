@@ -13,7 +13,9 @@ $ tunneler -c config.toml
 ```
 
 ## Configuration
-Tunneler uses TOML for configuration file format.
+Tunneler uses [TOML](https://github.com/toml-lang/toml) for configuration file format.
+
+[https://github.com/toml-lang/toml](https://github.com/toml-lang/toml)
 
 ```toml
 # Each top-level keys are server names which forwards connections via SSH.
