@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/naoina/toml"
 	"io/ioutil"
 	"net"
@@ -25,7 +26,7 @@ type Tunnel struct {
 	callback      func(net.Addr) `toml:"-"`
 }
 
-func LoadConfig(confpath string) (map[string]BastionConfig, error) {
+func LoadConfig(confpath string, printconf bool) (map[string]BastionConfig, error) {
 	config := make(map[string]BastionConfig)
 	data, err := ioutil.ReadFile(confpath)
 	if err != nil {
@@ -34,6 +35,10 @@ func LoadConfig(confpath string) (map[string]BastionConfig, error) {
 	err = toml.Unmarshal(data, &config)
 	if err != nil {
 		return config, err
+	}
+
+	if printconf {
+		fmt.Println(string(data))
 	}
 	return config, nil
 }
